@@ -43,6 +43,10 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            min-width: 120px;
         }
         button:hover {
             background-color: #2980b9;
@@ -304,16 +308,117 @@
         #apiKeyInput, #promptInput, #seed, #generationMode {
             width: 100%;
         }
+        .image-card p.prompt {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 2.4em;  /* 假设行高为1.2em */
+            line-height: 1.2em;
+        }
+        #darkModeToggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .image-card p {
+            margin: 5px 0;
+            padding: 0 10px;
+            font-size: 14px;
+        }
+        .image-card .prompt {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #resetButton {
+            background-color: #e74c3c;
+        }
+        #resetButton:hover {
+            background-color: #c0392b;
+        }
+        #selectAllButton, #downloadButton, #resetButton {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .tooltip {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        #generationControls, #imageControls {
+            margin-bottom: 10px;
+        }
+        #generationControls button, #imageControls button {
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        .tooltip {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #resetButton {
+            background-color: #e74c3c;
+        }
+        #resetButton:hover {
+            background-color: #c0392b;
+        }
+        #resetButton, #downloadButton {
+            min-width: 140px;  /* 稍微增加宽度以适应更长的文本 */
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <button id="darkModeToggle" onclick="toggleDarkMode()">🌓</button>
         <h1>Flux 批量生图小工具</h1>
         <p>感谢<a href="https://www.siliconflow.com/" target="_blank">硅基流动</a>提供的API支持。请勿滥用此工具，遵守相关法律法规。</p>
         <input type="password" id="apiKeyInput" placeholder="输入您的API密钥">
         <p class="api-key-hint">网站注册之后，进入账户管理，新建API密钥即可。</p>
         <div id="promptInstructions">
-            <p><strong class="red-text">提示词必须是英文。每行写一条提示词；只要按"回车"键，就会开始一条新的提示词。</strong></p>
+            <p><strong class="red-text">输入提示词，每行一个新的提示词。只要按"回车"键，就会开始一个新的提示词。</strong></p>
             <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
             <p>示例：</p>
             <pre>
@@ -322,7 +427,7 @@ An ancient castle perched on a cliff, shrouded in mist+1.5
 Futuristic cityscape with flying cars and neon lights
 A young woman with long black hair, wearing a red dress, standing in a forest clearing, soft sunlight filtering through the trees+2</pre>
             <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
-            <p><strong>注意：如果助手生成的一条提示词包含了多段文字，就手动改改格式，别因为跨行被误判为多条提示词。</strong></p>
+            <p><strong>注意：如果生成的一份提示词包括有好几段文字，就手动改一下格式，别换行。</strong></p>
         </div>
         <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
         <textarea id="promptInput" rows="10"></textarea>
@@ -332,7 +437,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         </select>
         <div id="manualControls" style="display:none;">
             <input type="number" id="imagesPerPrompt" placeholder="每个提示词生成的图片数量" min="1" max="5">
-            <input type="number" id="totalImages" placeholder="总图片数（可选）" min="1">
+            <input type="number" id="totalImages" placeholder="总图片数可选）" min="1">
         </div>
         <div class="advanced-settings">
             <h3>高级设置</h3>
@@ -348,15 +453,23 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             <label for="seed">种子值（可选）：</label>
             <input type="number" id="seed" placeholder="输入种子值（1-4294967295）" min="1" max="4294967295">
         </div>
-        <button id="generateButton" onclick="startGeneration()">开始生成</button>
-        <button id="pauseButton" onclick="pauseGeneration()" style="display:none;">暂停</button>
-        <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
-        <button id="darkModeToggle" onclick="toggleDarkMode()">切换深色模式</button>
+        <div id="generationControls">
+            <button id="generateButton" onclick="startGeneration()">生成</button>
+            <button id="pauseButton" onclick="pauseGeneration()" style="display:none;">暂停</button>
+            <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
+            <div class="tooltip">
+                <button id="resetButton" onclick="resetGeneration()" style="display:none;">清空并且重启</button>
+                <span class="tooltiptext">将按照新提示词重新生成图片，注意保存现有图片！</span>
+            </div>
+        </div>
+        <div id="imageControls">
+            <button id="selectAllButton" onclick="selectAllImages()">全选</button>
+            <button id="downloadButton" onclick="downloadSelectedImages()">打包图片链接</button>
+        </div>
         <div id="progressBar"><div id="progressBarFill"></div></div>
         <p id="progressText"></p>
-        <p id="quotaInfo"></p>
-        <button id="selectAllButton" onclick="selectAllImages()">全选</button>
-        <button id="downloadButton" onclick="downloadSelectedImages()">打包图片链接</button>
+        <div id="quotaInfo">API限速：每分钟2张，每天400张。</div>
+        <p id="quotaDisclaimer" style="font-size: 12px; color: #666;"></p>
         <div id="downloadInstructions">
             <p><strong>下载说明：</strong></p>
             <ul>
@@ -364,8 +477,8 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                 <li>批量下载：
                     <ol>
                         <li>选择想要的图片（使用每张图片上方的复选框）。</li>
-                        <li>点击"打包图片链接"，获得的仅仅是一堆URL，还需要再处理。</li>
-                        <li>可以尝试使用浏览器扩展，比如 <a href="https://www.pullywood.com/ImageAssistant/" target="blank">图片助手</a> 或 <a href="https://cn.eagle.cool/" target="blank">Eagle</a> (后者需购买)。</li>
+                        <li>点击"打包图片链接"按钮，将获得一个包含所有选中图片链接的文本文件。</li>
+                        <li>可以尝试使用下载管理器或浏览器扩展，或使用Python通过API生成图片可以直接保存在本地。</li>
                     </ol>
                 </li>
             </ul>
@@ -380,19 +493,53 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         let totalGenerated = 0;
         let targetTotal = 0;
         let dailyQuota = 400;
+        let dailyUsage = 0;
         let tokenBucket = 2;
         let lastRefillTime = Date.now();
+
+        function refillTokenBucket() {
+            const now = Date.now();
+            const timePassed = now - lastRefillTime;
+            const refillAmount = Math.floor(timePassed / 30000); // 每30秒恢复1个令牌
+            tokenBucket = Math.min(2, tokenBucket + refillAmount); // 最多2个令牌
+            lastRefillTime = now;
+        }
 
         document.getElementById('generationMode').addEventListener('change', function() {
             document.getElementById('manualControls').style.display = this.value === 'manual' ? 'block' : 'none';
         });
 
-        function refillTokenBucket() {
-            const now = Date.now();
-            const timePassed = now - lastRefillTime;
-            const tokensToAdd = Math.floor(timePassed / 30000); // 每30秒添加一个令牌
-            tokenBucket = Math.min(tokenBucket + tokensToAdd, 2); // 最多2个令牌
-            lastRefillTime = now;
+        function loadDailyUsage() {
+            const today = new Date().toDateString();
+            const storedData = JSON.parse(localStorage.getItem('fluxImageGeneratorUsage') || '{}');
+            if (storedData.date === today) {
+                dailyUsage = storedData.usage;
+            } else {
+                dailyUsage = 0;
+                localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: 0 }));
+            }
+            updateQuotaInfo();
+        }
+
+        function updateDailyUsage() {
+            dailyUsage++;
+            const today = new Date().toDateString();
+            localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: dailyUsage }));
+            updateQuotaInfo();
+        }
+
+        function updateQuotaInfo() {
+            const quotaInfo = document.getElementById('quotaInfo');
+            const quotaDisclaimer = document.getElementById('quotaDisclaimer');
+
+            if (!isGenerating) {
+                quotaInfo.textContent = `API限速：每分钟2张，每天${dailyQuota}张。`;
+                quotaDisclaimer.textContent = '';
+            } else {
+                const remainingQuota = Math.max(0, dailyQuota - dailyUsage);
+                quotaInfo.textContent = `今日预估使用量：${dailyUsage}/${dailyQuota}，剩余配额：${remainingQuota} 张`;
+                quotaDisclaimer.textContent = '注意：此为根据本地存储预估的使用量，实际以API服务统计为准。';
+            }
         }
 
         async function generateImage(apiKey, prompt) {
@@ -403,7 +550,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             tokenBucket--;
 
             const imageSize = document.getElementById('imageSize').value;
-            const seed = document.getElementById('seed').value;
+            const seed = document.getElementById('seed').value || '随机';
 
             const requestBody = {
                 model: "black-forest-labs/FLUX.1-schnell",
@@ -411,8 +558,12 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                 image_size: imageSize
             };
 
-            if (seed) {
+            if (seed !== '随机') {
                 requestBody.seed = parseInt(seed);
+            }
+
+            if (dailyUsage >= dailyQuota) {
+                throw new Error('已达到每日预估配额上限（400张）');
             }
 
             const response = await fetch(API_URL, {
@@ -425,10 +576,41 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let errorMessage = '';
+                switch (response.status) {
+                    case 400:
+                        errorMessage = '请求无效。可能的原因是提示词格式不正确或缺少必要参数。';
+                        break;
+                    case 401:
+                        errorMessage = '未经授权。可能的原因是API密钥无效或已过期。';
+                        break;
+                    case 404:
+                        errorMessage = '未找到请求的资源。可能的原因是API端点URL不正确。';
+                        break;
+                    case 429:
+                        errorMessage = '请求过多。可能的原因是超出了API的速率限制。请稍后再试或升级您的账户。';
+                        break;
+                    case 451:
+                        errorMessage = '由于法律原因无法生成图片。可能的原因是提示词包含敏感或不适当的内容。';
+                        break;
+                    case 503:
+                        errorMessage = '服务不可用。可能的原因是服务器暂时过载或正在维护。';
+                        break;
+                    case 504:
+                        errorMessage = '网关超时。可能的原因是服务器响应时间过长。';
+                        break;
+                    default:
+                        errorMessage = `未知错误。HTTP状态码: ${response.status}`;
+                }
+
+                const errorBody = await response.text();
+                throw new Error(`${errorMessage} 服务器响应: ${errorBody}`);
             }
 
             const data = await response.json();
+            updateDailyUsage();
+            updateQuotaInfo();
+            addImageToGallery(data.images[0].url, prompt, imageSize, seed);
             return data.images[0].url;
         }
 
@@ -464,8 +646,10 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
 
             document.getElementById('generateButton').style.display = 'none';
             document.getElementById('pauseButton').style.display = 'inline-block';
+            document.getElementById('resetButton').style.display = 'inline-block';
             isGenerating = true;
             totalGenerated = 0;
+            updateQuotaInfo();
 
             while (isGenerating && totalGenerated < targetTotal && totalGenerated < dailyQuota) {
                 for (const prompt of prompts) {
@@ -476,13 +660,14 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                         }
                         if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
                         try {
-                            const imageUrl = await generateImage(apiKey, prompt.text);
-                            addImageToGallery(imageUrl, prompt.text);
+                            await generateImage(apiKey, prompt.text);
                             totalGenerated++;
                             updateProgress();
                         } catch (error) {
                             console.error('生成图片时出错:', error);
                             alert(`生成图片时出错: ${error.message}`);
+                            // 添加一个短暂的暂停，以防止连续错误
+                            await new Promise(resolve => setTimeout(resolve, 5000));
                         }
                         await new Promise(resolve => setTimeout(resolve, 30000)); // 30秒延迟
                     }
@@ -494,9 +679,10 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             document.getElementById('generateButton').style.display = 'inline-block';
             document.getElementById('pauseButton').style.display = 'none';
             document.getElementById('resumeButton').style.display = 'none';
+            document.getElementById('resetButton').style.display = 'none';
         }
 
-        function addImageToGallery(imageUrl, prompt) {
+        function addImageToGallery(imageUrl, prompt, size, seed) {
             const imageContainer = document.getElementById('imageContainer');
             const imageCard = document.createElement('div');
             imageCard.className = 'image-card';
@@ -515,47 +701,72 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             imgWrapper.appendChild(img);
             imgWrapper.appendChild(checkbox);
             
-            const caption = document.createElement('p');
-            caption.textContent = prompt;
+            const promptPara = document.createElement('p');
+            promptPara.textContent = prompt;
+            promptPara.className = 'prompt';
             
-            const settings = document.createElement('p');
-            settings.textContent = `尺寸: ${document.getElementById('imageSize').value}, 种子: ${document.getElementById('seed').value || '随机'}`;
+            const sizePara = document.createElement('p');
+            sizePara.textContent = `尺寸: ${size}`;
+            
+            const seedPara = document.createElement('p');
+            seedPara.textContent = `种子: ${seed || '随机'}`;
             
             imageCard.appendChild(imgWrapper);
-            imageCard.appendChild(caption);
-            imageCard.appendChild(settings);
+            imageCard.appendChild(promptPara);
+            imageCard.appendChild(sizePara);
+            imageCard.appendChild(seedPara);
             imageContainer.appendChild(imageCard);
         }
 
         function updateProgress() {
             const progressBar = document.getElementById('progressBarFill');
             const progressText = document.getElementById('progressText');
-            const quotaInfo = document.getElementById('quotaInfo');
             const percentage = (totalGenerated / targetTotal) * 100;
             progressBar.style.width = `${percentage}%`;
             progressText.textContent = `已生成 ${totalGenerated} 张，目标 ${targetTotal} 张`;
-            quotaInfo.textContent = `今日剩余配额：${dailyQuota - totalGenerated} 张`;
+            updateQuotaInfo(); // 更新配额信息
         }
 
         function pauseGeneration() {
             isPaused = true;
             document.getElementById('pauseButton').style.display = 'none';
             document.getElementById('resumeButton').style.display = 'inline-block';
+            isGenerating = false;
+            updateQuotaInfo();
         }
 
         function resumeGeneration() {
             isPaused = false;
             document.getElementById('pauseButton').style.display = 'inline-block';
             document.getElementById('resumeButton').style.display = 'none';
+            isGenerating = true;
+            updateQuotaInfo();
+        }
+
+        function resetGeneration() {
+            isGenerating = false;
+            isPaused = false;
+            totalGenerated = 0;
+            targetTotal = 0;
+            tokenBucket = 2;
+            lastRefillTime = Date.now();
+            document.getElementById('generateButton').style.display = 'inline-block';
+            document.getElementById('pauseButton').style.display = 'none';
+            document.getElementById('resumeButton').style.display = 'none';
+            document.getElementById('resetButton').style.display = 'none';
+            document.getElementById('imageContainer').innerHTML = '';
+            updateProgress();
+            loadDailyUsage(); // 重新加载每日使用量
+            updateQuotaInfo();
         }
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const darkModeToggle = document.getElementById('darkModeToggle');
             if (document.body.classList.contains('dark-mode')) {
-                darkModeToggle.textContent = '切换明亮模式';
+                darkModeToggle.textContent = '🌞';
             } else {
-                darkModeToggle.textContent = '切换深色模式';
+                darkModeToggle.textContent = '🌓';
             }
         }
 
@@ -597,8 +808,13 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             URL.revokeObjectURL(url);
         }
 
-        // 初始化
-        updateProgress();
+        // 页面加载时初始化
+        window.onload = function() {
+            loadDailyUsage();
+            isGenerating = false;
+            updateQuotaInfo();
+            // ... 其他初始化代码 ...
+        };
     </script>
 </body>
 </html>
