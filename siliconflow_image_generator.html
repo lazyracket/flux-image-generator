@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux 批量生图小工具</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css">
+    <style>
+        body {
+            font-family: "LXGW WenKai", sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        textarea, input, select {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #imageContainer {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .image-card {
+            width: 30%;
+            margin-bottom: 20px;
+            text-align: center;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            overflow: hidden;
+            padding-bottom: 10px;
+        }
+        .image-card img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .image-checkbox {
+            display: block;
+            margin: 10px auto;
+        }
+        .image-card p {
+            margin: 5px 0;
+            padding: 0 10px;
+        }
+        #progressBar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #progressBar div {
+            height: 20px;
+            background-color: #2ecc71;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            transition: width 0.5s;
+        }
+        #quotaInfo {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .dark-mode {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        .dark-mode .container {
+            background-color: #34495e;
+        }
+        .dark-mode h1 {
+            color: #3498db;
+        }
+        .dark-mode textarea, .dark-mode input, .dark-mode select {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border-color: #7f8c8d;
+        }
+        .dark-mode button {
+            background-color: #e74c3c;
+        }
+        .dark-mode button:hover {
+            background-color: #c0392b;
+        }
+        .dark-mode .image-card {
+            background-color: #34495e;
+            color: #ecf0f1;
+        }
+        .dark-mode #progressBar {
+            background-color: #7f8c8d;
+        }
+        .advanced-settings {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .advanced-settings h3 {
+            margin-top: 0;
+        }
+        .advanced-settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .api-key-hint {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .dark-mode .api-key-hint {
+            color: #bdc3c7;
+        }
+        #promptHelperButton {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        #promptHelperButton:hover {
+            background-color: #27ae60;
+        }
+        #promptInstructions {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        #promptInstructions pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #promptInstructions a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        #promptInstructions a:hover {
+            text-decoration: underline;
+        }
+        #promptInput {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        label[for="promptInput"], .advanced-settings h3 {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .dark-mode label[for="promptInput"], .dark-mode .advanced-settings h3 {
+            color: #3498db;
+        }
+        #progressBar {
+            margin-top: 20px;
+        }
+        #progressText, #quotaInfo {
+            margin-top: 10px;
+        }
+        .dark-mode #promptInstructions {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        .dark-mode #promptInstructions a {
+            color: #3498db;
+        }
+        .dark-mode #promptInstructions pre {
+            background-color: #34495e;
+            color: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .dark-mode .advanced-settings {
+            background-color: #34495e;
+            color: #ecf0f1;
+        }
+        .dark-mode .advanced-settings select,
+        .dark-mode .advanced-settings input {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border-color: #7f8c8d;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .dark-mode a {
+            color: #5dade2;
+        }
+        .dark-mode a:hover {
+            color: #3498db;
+        }
+        .red-text {
+            color: #e74c3c;
+        }
+        .image-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+        }
+        .image-card {
+            position: relative;
+        }
+        #selectAllButton, #downloadButton {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .checkbox-label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .image-checkbox {
+            margin-right: 5px;
+        }
+        #downloadInstructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        #downloadInstructions ul {
+            padding-left: 20px;
+        }
+        .dark-mode #downloadInstructions {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        .dark-mode .checkbox-label {
+            background-color: rgba(52, 73, 94, 0.7);
+            color: #ecf0f1;
+        }
+        .checkbox-wrapper {
+            text-align: left;
+            padding: 0 10px;
+            margin-top: 5px;
+        }
+        .image-checkbox {
+            margin: 0;
+        }
+        .image-wrapper {
+            position: relative;
+        }
+        .image-card img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .image-checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+        }
+        .image-card p {
+            margin: 10px 0;
+            padding: 0 10px;
+        }
+        #apiKeyInput, #promptInput, #seed, #generationMode {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flux 批量生图小工具</h1>
+        <p>感谢<a href="https://www.siliconflow.com/" target="_blank">硅基流动</a>提供的API支持。请勿滥用此工具，遵守相关法律法规。</p>
+        <input type="password" id="apiKeyInput" placeholder="输入您的API密钥">
+        <p class="api-key-hint">网站注册之后，进入账户管理，新建API密钥即可。</p>
+        <div id="promptInstructions">
+            <p><strong class="red-text">输入提示词，每行一个新的提示词。只要按"回车"键，就会开始一个新的提示词。</strong></p>
+            <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
+            <p>示例：</p>
+            <pre>
+A beautiful garden with blooming flowers under bright sunlight
+An ancient castle perched on a cliff, shrouded in mist+1.5
+Futuristic cityscape with flying cars and neon lights
+A young woman with long black hair, wearing a red dress, standing in a forest clearing, soft sunlight filtering through the trees+2</pre>
+            <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
+            <p><strong>注意：如果生成的一份提示词包括有好几段文字，就手动改一下格式，别换行。</strong></p>
+        </div>
+        <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
+        <textarea id="promptInput" rows="10"></textarea>
+        <select id="generationMode">
+            <option value="smart">智能模式（自动分配生成次数）</option>
+            <option value="manual">手动模式</option>
+        </select>
+        <div id="manualControls" style="display:none;">
+            <input type="number" id="imagesPerPrompt" placeholder="每个提示词生成的图片数量" min="1" max="5">
+            <input type="number" id="totalImages" placeholder="总图片数（可选）" min="1">
+        </div>
+        <div class="advanced-settings">
+            <h3>高级设置</h3>
+            <label for="imageSize">图片尺寸：</label>
+            <select id="imageSize">
+                <option value="1024x1024">1024x1024</option>
+                <option value="512x1024">512x1024</option>
+                <option value="768x512">768x512</option>
+                <option value="768x1024">768x1024</option>
+                <option value="1024x576">1024x576</option>
+                <option value="576x1024">576x1024</option>
+            </select>
+            <label for="seed">种子值（可选）：</label>
+            <input type="number" id="seed" placeholder="输入种子值（1-4294967295）" min="1" max="4294967295">
+        </div>
+        <button id="generateButton" onclick="startGeneration()">开始生成</button>
+        <button id="pauseButton" onclick="pauseGeneration()" style="display:none;">暂停</button>
+        <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
+        <button id="darkModeToggle" onclick="toggleDarkMode()">切换深色模式</button>
+        <div id="progressBar"><div id="progressBarFill"></div></div>
+        <p id="progressText"></p>
+        <p id="quotaInfo"></p>
+        <button id="selectAllButton" onclick="selectAllImages()">全选</button>
+        <button id="downloadButton" onclick="downloadSelectedImages()">打包图片链接</button>
+        <div id="downloadInstructions">
+            <p><strong>下载说明：</strong></p>
+            <ul>
+                <li>单个图片下载：右键点击图片，选择"图片另存为"即可保存单张图片。</li>
+                <li>批量下载：
+                    <ol>
+                        <li>选择想要的图片（使用每张图片上方的复选框）。</li>
+                        <li>点击"打包图片链接"按钮，将获得一个包含所有选中图片链接的文本文件。</li>
+                        <li>可以尝试使用下载管理器或浏览器扩展，或使用Python通过API生成图片可以直接保存在本地。</li>
+                    </ol>
+                </li>
+            </ul>
+        </div>
+        <div id="imageContainer"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.siliconflow.cn/v1/images/generations';
+        let isGenerating = false;
+        let isPaused = false;
+        let totalGenerated = 0;
+        let targetTotal = 0;
+        let dailyQuota = 400;
+        let tokenBucket = 2;
+        let lastRefillTime = Date.now();
+
+        document.getElementById('generationMode').addEventListener('change', function() {
+            document.getElementById('manualControls').style.display = this.value === 'manual' ? 'block' : 'none';
+        });
+
+        function refillTokenBucket() {
+            const now = Date.now();
+            const timePassed = now - lastRefillTime;
+            const tokensToAdd = Math.floor(timePassed / 30000); // 每30秒添加一个令牌
+            tokenBucket = Math.min(tokenBucket + tokensToAdd, 2); // 最多2个令牌
+            lastRefillTime = now;
+        }
+
+        async function generateImage(apiKey, prompt) {
+            refillTokenBucket();
+            if (tokenBucket < 1) {
+                throw new Error('速率限制：请稍后再试');
+            }
+            tokenBucket--;
+
+            const imageSize = document.getElementById('imageSize').value;
+            const seed = document.getElementById('seed').value;
+
+            const requestBody = {
+                model: "black-forest-labs/FLUX.1-schnell",
+                prompt: prompt,
+                image_size: imageSize
+            };
+
+            if (seed) {
+                requestBody.seed = parseInt(seed);
+            }
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.images[0].url;
+        }
+
+        async function startGeneration() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                alert('请输入API密钥');
+                return;
+            }
+
+            const promptInput = document.getElementById('promptInput');
+            const prompts = promptInput.value.split('\n').filter(prompt => prompt.trim() !== '').map(prompt => {
+                const [text, weight] = prompt.split('+');
+                return { text: text.trim(), weight: parseFloat(weight) || 1 };
+            });
+
+            const generationMode = document.getElementById('generationMode').value;
+            let imagesPerPrompt = 1;
+            if (generationMode === 'manual') {
+                imagesPerPrompt = parseInt(document.getElementById('imagesPerPrompt').value) || 1;
+                targetTotal = parseInt(document.getElementById('totalImages').value) || prompts.length * imagesPerPrompt;
+            } else {
+                // 智能模式：平均分配每日配额
+                targetTotal = Math.min(dailyQuota, prompts.length * 5); // 每个提示词最多5张
+                imagesPerPrompt = Math.floor(targetTotal / prompts.length);
+            }
+
+            if (targetTotal > dailyQuota) {
+                if (!confirm(`您设置的总图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
+                    return;
+                }
+            }
+
+            document.getElementById('generateButton').style.display = 'none';
+            document.getElementById('pauseButton').style.display = 'inline-block';
+            isGenerating = true;
+            totalGenerated = 0;
+
+            while (isGenerating && totalGenerated < targetTotal && totalGenerated < dailyQuota) {
+                for (const prompt of prompts) {
+                    for (let i = 0; i < imagesPerPrompt * prompt.weight; i++) {
+                        if (isPaused) {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // 检查是否暂停
+                            continue;
+                        }
+                        if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
+                        try {
+                            const imageUrl = await generateImage(apiKey, prompt.text);
+                            addImageToGallery(imageUrl, prompt.text);
+                            totalGenerated++;
+                            updateProgress();
+                        } catch (error) {
+                            console.error('生成图片时出错:', error);
+                            alert(`生成图片时出错: ${error.message}`);
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 30000)); // 30秒延迟
+                    }
+                    if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
+                }
+            }
+
+            isGenerating = false;
+            document.getElementById('generateButton').style.display = 'inline-block';
+            document.getElementById('pauseButton').style.display = 'none';
+            document.getElementById('resumeButton').style.display = 'none';
+        }
+
+        function addImageToGallery(imageUrl, prompt) {
+            const imageContainer = document.getElementById('imageContainer');
+            const imageCard = document.createElement('div');
+            imageCard.className = 'image-card';
+            
+            const imgWrapper = document.createElement('div');
+            imgWrapper.className = 'image-wrapper';
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = prompt;
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'image-checkbox';
+            
+            imgWrapper.appendChild(img);
+            imgWrapper.appendChild(checkbox);
+            
+            const caption = document.createElement('p');
+            caption.textContent = prompt;
+            
+            const settings = document.createElement('p');
+            settings.textContent = `尺寸: ${document.getElementById('imageSize').value}, 种子: ${document.getElementById('seed').value || '随机'}`;
+            
+            imageCard.appendChild(imgWrapper);
+            imageCard.appendChild(caption);
+            imageCard.appendChild(settings);
+            imageContainer.appendChild(imageCard);
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBarFill');
+            const progressText = document.getElementById('progressText');
+            const quotaInfo = document.getElementById('quotaInfo');
+            const percentage = (totalGenerated / targetTotal) * 100;
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `已生成 ${totalGenerated} 张，目标 ${targetTotal} 张`;
+            quotaInfo.textContent = `今日剩余配额：${dailyQuota - totalGenerated} 张`;
+        }
+
+        function pauseGeneration() {
+            isPaused = true;
+            document.getElementById('pauseButton').style.display = 'none';
+            document.getElementById('resumeButton').style.display = 'inline-block';
+        }
+
+        function resumeGeneration() {
+            isPaused = false;
+            document.getElementById('pauseButton').style.display = 'inline-block';
+            document.getElementById('resumeButton').style.display = 'none';
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            if (document.body.classList.contains('dark-mode')) {
+                darkModeToggle.textContent = '切换明亮模式';
+            } else {
+                darkModeToggle.textContent = '切换深色模式';
+            }
+        }
+
+        function selectAllImages() {
+            const checkboxes = document.querySelectorAll('.image-checkbox');
+            const selectAllButton = document.getElementById('selectAllButton');
+            const isSelectAll = selectAllButton.textContent === '全选';
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = isSelectAll;
+            });
+            
+            selectAllButton.textContent = isSelectAll ? '取消全选' : '全选';
+        }
+
+        function downloadSelectedImages() {
+            const selectedImages = document.querySelectorAll('.image-checkbox:checked');
+            if (selectedImages.length === 0) {
+                alert('请至少选择一张图片');
+                return;
+            }
+
+            const imageUrls = Array.from(selectedImages).map(checkbox => {
+                const imageCard = checkbox.closest('.image-card');
+                return imageCard.querySelector('img').src;
+            });
+
+            const linksText = imageUrls.join('\n');
+            const blob = new Blob([linksText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'image_links.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            URL.revokeObjectURL(url);
+        }
+
+        // 初始化
+        updateProgress();
+    </script>
+</body>
+</html>
