@@ -410,6 +410,39 @@
         #resetButton, #downloadButton {
             min-width: 140px;  /* 稍微增加宽度以适应更长的文本 */
         }
+        /* 添加以下样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -418,7 +451,7 @@
         <h1>Flux 批量生图小工具</h1>
         <p>感谢<a href="https://www.siliconflow.com/" target="_blank">硅基流动</a>提供的API支持。请勿滥用此工具，遵守相关法律法规。</p>
         <input type="password" id="apiKeyInput" placeholder="输入您的API密钥">
-        <p class="api-key-hint">网站注册之后，进入账户管理，新建API密钥即可。</p>
+        <p class="api-key-hint">注册硅基流动之后，进入账户管理，新建API密钥即可。</p>
         <div id="promptInstructions">
             <p><strong class="red-text">输入提示词，每行一个新的提示词。只要按"回车"键，就会开始一个新的提示词。</strong></p>
             <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
@@ -439,7 +472,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         </select>
         <div id="manualControls" style="display:none;">
             <input type="number" id="imagesPerPrompt" placeholder="每个提示词生成的图片数量" min="1" max="5">
-            <input type="number" id="totalImages" placeholder="总图片数可选）" min="1">
+            <input type="number" id="totalImages" placeholder="总图片数（可选）" min="1">
         </div>
         <div class="advanced-settings">
             <h3>高级设置</h3>
@@ -486,6 +519,12 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             </ul>
         </div>
         <div id="imageContainer"></div>
+    </div>
+
+    <!-- 添加以下模态框 -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage">
     </div>
 
     <script>
@@ -641,7 +680,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             }
 
             if (targetTotal > dailyQuota) {
-                if (!confirm(`您设置的��图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
+                if (!confirm(`您设置的图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
                     return;
                 }
             }
@@ -718,6 +757,10 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             imageCard.appendChild(sizePara);
             imageCard.appendChild(seedPara);
             imageContainer.appendChild(imageCard);
+            
+            img.onclick = function() {
+                openModal(imageUrl);
+            };
         }
 
         function updateProgress() {
@@ -808,6 +851,26 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
+        }
+
+        // 添加以下函数
+        function openModal(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = "block";
+            modalImg.src = imageUrl;
+        }
+
+        // 关闭模态框
+        const modal = document.getElementById('imageModal');
+        const span = document.getElementsByClassName("close")[0];
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
         }
 
         // 页面加载时初始化
