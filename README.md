@@ -3,11 +3,13 @@
 ## 项目简介
 
 基于网页的应用程序,利用硅基流动提供的 API 服务批量生成 AI 图像。
+
 可以在[这里](https://lazyracket.github.io/flux-image-generator/by_siliconflow.html)快速预览。
 
 ## 使用的模型
 
 black-forest-labs/FLUX.1-schnell - 由 Black Forest Labs 开发的文本到图像生成模型。
+
 硅基流动通过 SiliconCloud 平台提供 API 访问。
 
 ## 主要特性
