@@ -313,7 +313,7 @@
         <input type="password" id="apiKeyInput" placeholder="输入您的API密钥">
         <p class="api-key-hint">网站注册之后，进入账户管理，新建API密钥即可。</p>
         <div id="promptInstructions">
-            <p><strong class="red-text">提示词必须是英文。每行一个新的提示词；只要按"回车"键，就会开始一个新的提示词。</strong></p>
+            <p><strong class="red-text">提示词必须是英文。每行写一条提示词；只要按"回车"键，就会开始一条新的提示词。</strong></p>
             <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
             <p>示例：</p>
             <pre>
@@ -322,7 +322,7 @@ An ancient castle perched on a cliff, shrouded in mist+1.5
 Futuristic cityscape with flying cars and neon lights
 A young woman with long black hair, wearing a red dress, standing in a forest clearing, soft sunlight filtering through the trees+2</pre>
             <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
-            <p><strong>注意：如果生成的一份提示词包括有好几段文字，就手动改一下格式，别换行。</strong></p>
+            <p><strong>注意：如果助手生成的一条提示词包含了多段文字，就手动改改格式，别因为跨行被误判为多条提示词。</strong></p>
         </div>
         <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
         <textarea id="promptInput" rows="10"></textarea>
