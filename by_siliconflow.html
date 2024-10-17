@@ -345,6 +345,8 @@
             margin-left: -100px;
             opacity: 0;
             transition: opacity 0.3s;
+            white-space: normal; /* 允许文本换行 */
+            line-height: 1.2; /* 调整行高 */
         }
         .tooltip:hover .tooltiptext {
             visibility: visible;
@@ -459,7 +461,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
             <div class="tooltip">
                 <button id="resetButton" onclick="resetGeneration()" style="display:none;">清空并且重启</button>
-                <span class="tooltiptext">将按照新提示词重新生成图片，注意保存现有图片！</span>
+                <span class="tooltiptext">按新提示词重新生成，<br>请注意保存现有图片！</span>
             </div>
         </div>
         <div id="imageControls">
@@ -639,7 +641,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             }
 
             if (targetTotal > dailyQuota) {
-                if (!confirm(`您设置的总图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
+                if (!confirm(`您设置的��图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
                     return;
                 }
             }
