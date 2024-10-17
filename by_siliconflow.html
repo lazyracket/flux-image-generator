@@ -332,25 +332,21 @@
         }
         .tooltip .tooltiptext {
             visibility: hidden;
-            width: 200px;
-            background-color: #555;
+            width: 200px; /* 增加宽度 */
+            background-color: black;
             color: #fff;
             text-align: center;
             border-radius: 6px;
-            padding: 5px;
+            padding: 5px 0;
             position: absolute;
             z-index: 1;
             bottom: 125%;
             left: 50%;
-            margin-left: -100px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            white-space: normal; /* 允许文本换行 */
-            line-height: 1.2; /* 调整行高 */
+            margin-left: -100px; /* 调整左边距以保持居中 */
+            white-space: nowrap; /* 防止文字换行 */
         }
         .tooltip:hover .tooltiptext {
             visibility: visible;
-            opacity: 1;
         }
         .image-card p {
             margin: 5px 0;
@@ -443,6 +439,26 @@
             text-decoration: none;
             cursor: pointer;
         }
+        /* 添加新的样式 */
+        #notificationArea {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .notification {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            max-width: 300px;
+            animation: fadeInOut 5s ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -453,7 +469,7 @@
         <input type="password" id="apiKeyInput" placeholder="输入您的API密钥">
         <p class="api-key-hint">注册硅基流动之后，进入账户管理，新建API密钥即可。</p>
         <div id="promptInstructions">
-            <p><strong class="red-text">输入提示词，每行一个新的提示词。只要按"回车"键，就会开始一个新的提示词。</strong></p>
+            <p><strong class="red-text">提示词必须是英文。每行写一则提示词；只要按"回车"键，就会开始一则新的提示词。</strong></p>
             <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
             <p>示例：</p>
             <pre>
@@ -462,7 +478,7 @@ An ancient castle perched on a cliff, shrouded in mist+1.5
 Futuristic cityscape with flying cars and neon lights
 A young woman with long black hair, wearing a red dress, standing in a forest clearing, soft sunlight filtering through the trees+2</pre>
             <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
-            <p><strong>注意：如果生成的一份提示词包括有好几段文字，就手动改一下格式，别换行。</strong></p>
+            <p><strong>注意：如果助手生成的一则提示词包含了多段文字，就手动改改格式，以免因跨行被误判为多则提示词。</strong></p>
         </div>
         <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
         <textarea id="promptInput" rows="10"></textarea>
@@ -486,14 +502,14 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                 <option value="576x1024">576x1024</option>
             </select>
             <label for="seed">种子值（可选）：</label>
-            <input type="number" id="seed" placeholder="输入种子值（1-4294967295）" min="1" max="4294967295">
+            <input type="number" id="seed" placeholder=" 1-4294967295" min="1" max="4294967295">
         </div>
         <div id="generationControls">
             <button id="generateButton" onclick="startGeneration()">生成</button>
             <button id="pauseButton" onclick="pauseGeneration()" style="display:none;">暂停</button>
             <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
             <div class="tooltip">
-                <button id="resetButton" onclick="resetGeneration()" style="display:none;">清空并且重启</button>
+                <button id="resetButton" onclick="resetGeneration()">清空并且重启</button>
                 <span class="tooltiptext">按新提示词重新生成，<br>请注意保存现有图片！</span>
             </div>
         </div>
@@ -512,8 +528,8 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                 <li>批量下载：
                     <ol>
                         <li>选择想要的图片（使用每张图片上方的复选框）。</li>
-                        <li>点击"打包图片链接"按钮，将获得一个包含所有选中图片链接的文本文件。</li>
-                        <li>可以尝试使用下载管理器或浏览器扩展，或使用Python通过API生成图片可以直接保存在本地。</li>
+                        <li>点击"打包图片链接"，获得的仅仅是一堆URL，还需要再处理。</li>
+                        <li>可以尝试使用浏览器扩展，比如 <a href="https://www.pullywood.com/ImageAssistant/" target="blank">图片助手</a> 或 <a href="https://cn.eagle.cool/" target="blank">Eagle</a> (后者需要购买)。</li>
                     </ol>
                 </li>
             </ul>
@@ -527,6 +543,8 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         <img class="modal-content" id="modalImage">
     </div>
 
+    <div id="notificationArea"></div>
+
     <script>
         const API_URL = 'https://api.siliconflow.cn/v1/images/generations';
         let isGenerating = false;
@@ -537,128 +555,122 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         let dailyUsage = 0;
         let tokenBucket = 2;
         let lastRefillTime = Date.now();
+        let cooldownTimer = 0;
 
-        function refillTokenBucket() {
-            const now = Date.now();
-            const timePassed = now - lastRefillTime;
-            const refillAmount = Math.floor(timePassed / 30000); // 每30秒恢复1个令牌
-            tokenBucket = Math.min(2, tokenBucket + refillAmount); // 最多2个令牌
-            lastRefillTime = now;
+        function showNotification(message, duration = 5000) {
+            const notificationArea = document.getElementById('notificationArea');
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notificationArea.appendChild(notification);
+            setTimeout(() => {
+                notificationArea.removeChild(notification);
+            }, duration);
         }
 
-        document.getElementById('generationMode').addEventListener('change', function() {
-            document.getElementById('manualControls').style.display = this.value === 'manual' ? 'block' : 'none';
-        });
-
-        function loadDailyUsage() {
-            const today = new Date().toDateString();
-            const storedData = JSON.parse(localStorage.getItem('fluxImageGeneratorUsage') || '{}');
-            if (storedData.date === today) {
-                dailyUsage = storedData.usage;
-            } else {
-                dailyUsage = 0;
-                localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: 0 }));
-            }
-            updateQuotaInfo();
-        }
-
-        function updateDailyUsage() {
-            dailyUsage++;
-            const today = new Date().toDateString();
-            localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: dailyUsage }));
-            updateQuotaInfo();
-        }
-
-        function updateQuotaInfo() {
-            const quotaInfo = document.getElementById('quotaInfo');
-            const quotaDisclaimer = document.getElementById('quotaDisclaimer');
-
-            if (!isGenerating) {
-                quotaInfo.textContent = `API限速：每分钟2张，每天${dailyQuota}张。`;
-                quotaDisclaimer.textContent = '';
-            } else {
-                const remainingQuota = Math.max(0, dailyQuota - dailyUsage);
-                quotaInfo.textContent = `今日预估使用量：${dailyUsage}/${dailyQuota}，剩余配额：${remainingQuota} 张`;
-                quotaDisclaimer.textContent = '注意：此为根据本地存储预估的使用量，实际以API服务统计为准。';
+        function updateCooldownTimer() {
+            if (cooldownTimer > 0) {
+                showNotification(`冷却中: ${cooldownTimer}秒`, 1000);
+                cooldownTimer--;
+                setTimeout(updateCooldownTimer, 1000);
             }
         }
 
         async function generateImage(apiKey, prompt) {
-            refillTokenBucket();
-            if (tokenBucket < 1) {
-                throw new Error('速率限制：请稍后再试');
-            }
-            tokenBucket--;
-
-            const imageSize = document.getElementById('imageSize').value;
-            const seed = document.getElementById('seed').value || '随机';
-
-            const requestBody = {
-                model: "black-forest-labs/FLUX.1-schnell",
-                prompt: prompt,
-                image_size: imageSize
-            };
-
-            if (seed !== '随机') {
-                requestBody.seed = parseInt(seed);
+            if (cooldownTimer > 0) {
+                showNotification(`请等待冷却时间结束: ${cooldownTimer}秒`);
+                return;
             }
 
-            if (dailyUsage >= dailyQuota) {
-                throw new Error('已达到每日预估配额上限（400张）');
-            }
+            try {
+                refillTokenBucket();
+                if (tokenBucket < 1) {
+                    cooldownTimer = 30;
+                    showNotification('速率限制：请稍后再试');
+                    updateCooldownTimer();
+                    return;
+                }
+                tokenBucket--;
 
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            });
+                const imageSize = document.getElementById('imageSize').value;
+                const seed = document.getElementById('seed').value || '随机';
 
-            if (!response.ok) {
-                let errorMessage = '';
-                switch (response.status) {
-                    case 400:
-                        errorMessage = '请求无效。可能的原因是提示词格式不正确或缺少必要参数。';
-                        break;
-                    case 401:
-                        errorMessage = '未经授权。可能的原因是API密钥无效或已过期。';
-                        break;
-                    case 404:
-                        errorMessage = '未找到请求的资源。可能的原因是API端点URL不正确。';
-                        break;
-                    case 429:
-                        errorMessage = '请求过多。可能的原因是超出了API的速率限制。请稍后再试或升级您的账户。';
-                        break;
-                    case 451:
-                        errorMessage = '由于法律原因无法生成图片。可能的原因是提示词包含敏感或不适当的内容。';
-                        break;
-                    case 503:
-                        errorMessage = '服务不可用。可能的原因是服务器暂时过载或正在维护。';
-                        break;
-                    case 504:
-                        errorMessage = '网关超时。可能的原因是服务器响应时间过长。';
-                        break;
-                    default:
-                        errorMessage = `未知错误。HTTP状态码: ${response.status}`;
+                const requestBody = {
+                    model: "black-forest-labs/FLUX.1-schnell",
+                    prompt: prompt,
+                    image_size: imageSize
+                };
+
+                if (seed !== '随机') {
+                    requestBody.seed = parseInt(seed);
                 }
 
-                const errorBody = await response.text();
-                throw new Error(`${errorMessage} 服务器响应: ${errorBody}`);
-            }
+                if (dailyUsage >= dailyQuota) {
+                    showNotification('已达到每日预估配额上限（400张）');
+                    return;
+                }
 
-            const data = await response.json();
-            updateDailyUsage();
-            updateQuotaInfo();
-            addImageToGallery(data.images[0].url, prompt, imageSize, seed);
-            return data.images[0].url;
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    let errorMessage = '';
+                    switch (response.status) {
+                        case 400:
+                            errorMessage = '请求无效。可能的原因是提示词格式不正确或缺少必要参数。';
+                            break;
+                        case 401:
+                            errorMessage = '未经授权。可能的原因是API密钥无效或已过期。';
+                            break;
+                        case 404:
+                            errorMessage = '未找到请求的资源。可能的原因是API端点URL不正确。';
+                            break;
+                        case 429:
+                            errorMessage = '请求过多。可能的原因是超出了API的速率限制。请稍后再试或升级您的账户。';
+                            break;
+                        case 451:
+                            errorMessage = '由于法律原因无法生成图片。可能的原因是提示词包含敏感或不适当的内容。';
+                            break;
+                        case 503:
+                            errorMessage = '服务不可用。可能的原因是服务器暂时过载或正在维护。';
+                            break;
+                        case 504:
+                            errorMessage = '网关超时。可能的原因是服务器响应时间过长。';
+                            break;
+                        default:
+                            errorMessage = `未知错误。HTTP状态码: ${response.status}`;
+                    }
+
+                    const errorBody = await response.text();
+                    throw new Error(`${errorMessage} 服务器响应: ${errorBody}`);
+                }
+
+                const data = await response.json();
+                updateDailyUsage();
+                updateQuotaInfo();
+                addImageToGallery(data.images[0].url, prompt, imageSize, seed);
+                totalGenerated++;
+                updateProgress();
+                return data.images[0].url;
+            } catch (error) {
+                console.error('生成图片时出错:', error);
+                showNotification(`生成图片时出错: ${error.message}`);
+                cooldownTimer = 30;
+                updateCooldownTimer();
+                return null; // 返回null而不是抛出错误
+            }
         }
 
         async function startGeneration() {
             const apiKey = document.getElementById('apiKeyInput').value.trim();
             if (!apiKey) {
-                alert('请输入API密钥');
+                showNotification('请输入API密钥');
                 return;
             }
 
@@ -680,35 +692,28 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             }
 
             if (targetTotal > dailyQuota) {
-                if (!confirm(`您设置的图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。是否继续？`)) {
-                    return;
-                }
+                showNotification(`您设置的图片数 ${targetTotal} 超过了每日限额 ${dailyQuota}。将生成 ${dailyQuota} 张图片。`);
+                targetTotal = dailyQuota;
             }
 
             document.getElementById('generateButton').style.display = 'none';
             document.getElementById('pauseButton').style.display = 'inline-block';
-            document.getElementById('resetButton').style.display = 'inline-block';
             isGenerating = true;
-            totalGenerated = 0;
+            totalGenerated = 0; // 重置计数器
+            updateProgress(); // 初始化进度显示，移除了额外的参数
             updateQuotaInfo();
 
             while (isGenerating && totalGenerated < targetTotal && totalGenerated < dailyQuota) {
                 for (const prompt of prompts) {
                     for (let i = 0; i < imagesPerPrompt * prompt.weight; i++) {
                         if (isPaused) {
-                            await new Promise(resolve => setTimeout(resolve, 1000)); // 检查是否暂停
+                            await new Promise(resolve => setTimeout(resolve, 1000));
                             continue;
                         }
                         if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
-                        try {
-                            await generateImage(apiKey, prompt.text);
-                            totalGenerated++;
-                            updateProgress();
-                        } catch (error) {
-                            console.error('生成图片时出错:', error);
-                            alert(`生成图片时出错: ${error.message}`);
-                            // 添加一个短暂的暂停，以防止连续错误
-                            await new Promise(resolve => setTimeout(resolve, 5000));
+                        const result = await generateImage(apiKey, prompt.text);
+                        if (result) {
+                            updateProgress(); // 更新进度，移除了额外的参数
                         }
                         await new Promise(resolve => setTimeout(resolve, 30000)); // 30秒延迟
                     }
@@ -720,7 +725,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             document.getElementById('generateButton').style.display = 'inline-block';
             document.getElementById('pauseButton').style.display = 'none';
             document.getElementById('resumeButton').style.display = 'none';
-            document.getElementById('resetButton').style.display = 'none';
+            updateQuotaInfo();
         }
 
         function addImageToGallery(imageUrl, prompt, size, seed) {
@@ -761,6 +766,9 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             img.onclick = function() {
                 openModal(imageUrl);
             };
+
+            // 添加以下代码在函数末尾
+            updateSelectAllButtonState();
         }
 
         function updateProgress() {
@@ -768,7 +776,12 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             const progressText = document.getElementById('progressText');
             const percentage = (totalGenerated / targetTotal) * 100;
             progressBar.style.width = `${percentage}%`;
-            progressText.textContent = `已生成 ${totalGenerated} 张，目标 ${targetTotal} 张`;
+            
+            // 只显示总进度信息
+            const totalProgressLine = `总进度: 已生成 ${totalGenerated} 张 | 目标 ${targetTotal} 张`;
+            
+            progressText.textContent = totalProgressLine;
+            
             updateQuotaInfo(); // 更新配额信息
         }
 
@@ -798,11 +811,33 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             document.getElementById('generateButton').style.display = 'inline-block';
             document.getElementById('pauseButton').style.display = 'none';
             document.getElementById('resumeButton').style.display = 'none';
-            document.getElementById('resetButton').style.display = 'none';
             document.getElementById('imageContainer').innerHTML = '';
             updateProgress();
             loadDailyUsage(); // 重新加载每日使用量
             updateQuotaInfo();
+
+            // 重置"全选/取消全选"按钮
+            const selectAllButton = document.getElementById('selectAllButton');
+            selectAllButton.textContent = '全选';
+            selectAllButton.dataset.state = 'select'; // 添加一个数据属性来跟踪状态
+
+            // 确保 tooltiptext 存在并可见
+            const clearRestartButton = document.getElementById('resetButton');
+            let tooltip = clearRestartButton.querySelector('.tooltiptext');
+            if (!tooltip) {
+                tooltip = document.createElement('span');
+                tooltip.className = 'tooltiptext';
+                tooltip.innerHTML = '按新提示词重新生成，<br>请注意保存现有图片！';
+                clearRestartButton.appendChild(tooltip);
+            }
+            tooltip.style.visibility = 'hidden'; // 先隐藏,以便重新触发hover效果
+
+            // 使用 setTimeout 来确保 tooltiptext 在下一个事件循环中重新显示
+            setTimeout(() => {
+                tooltip.style.visibility = '';
+            }, 0);
+
+            showNotification('已清空画廊并重置生成计数');
         }
 
         function toggleDarkMode() {
@@ -818,19 +853,25 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         function selectAllImages() {
             const checkboxes = document.querySelectorAll('.image-checkbox');
             const selectAllButton = document.getElementById('selectAllButton');
-            const isSelectAll = selectAllButton.textContent === '全选';
+            const isSelectAll = selectAllButton.dataset.state === 'select';
             
             checkboxes.forEach(checkbox => {
                 checkbox.checked = isSelectAll;
             });
             
-            selectAllButton.textContent = isSelectAll ? '取消全选' : '全选';
+            if (isSelectAll) {
+                selectAllButton.textContent = '取消全选';
+                selectAllButton.dataset.state = 'deselect';
+            } else {
+                selectAllButton.textContent = '全选';
+                selectAllButton.dataset.state = 'select';
+            }
         }
 
         function downloadSelectedImages() {
             const selectedImages = document.querySelectorAll('.image-checkbox:checked');
             if (selectedImages.length === 0) {
-                alert('请至少选择一张图片');
+                showNotification('请至少选择一张图片');
                 return;
             }
 
@@ -880,6 +921,78 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             updateQuotaInfo();
             // ... 其他初始化代码 ...
         };
+
+        document.getElementById('generationMode').addEventListener('change', function() {
+            document.getElementById('manualControls').style.display = this.value === 'manual' ? 'block' : 'none';
+        });
+
+        function loadDailyUsage() {
+            const today = new Date().toDateString();
+            const storedData = JSON.parse(localStorage.getItem('fluxImageGeneratorUsage') || '{}');
+            if (storedData.date === today) {
+                dailyUsage = storedData.usage;
+            } else {
+                dailyUsage = 0;
+                localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: 0 }));
+            }
+            updateQuotaInfo();
+        }
+
+        function updateDailyUsage() {
+            dailyUsage++;
+            const today = new Date().toDateString();
+            localStorage.setItem('fluxImageGeneratorUsage', JSON.stringify({ date: today, usage: dailyUsage }));
+            updateQuotaInfo();
+        }
+
+        function updateQuotaInfo() {
+            const quotaInfo = document.getElementById('quotaInfo');
+            const quotaDisclaimer = document.getElementById('quotaDisclaimer');
+
+            if (!isGenerating) {
+                quotaInfo.textContent = `API限速：每分钟2张，每天${dailyQuota}张。`;
+                quotaDisclaimer.textContent = '';
+            } else {
+                const remainingQuota = Math.max(0, dailyQuota - dailyUsage);
+                quotaInfo.textContent = `今日预估使用量：${dailyUsage}/${dailyQuota}，剩余配额：${remainingQuota} 张`;
+                quotaDisclaimer.textContent = '注意：此为根据本地存储预估的使用量，实际以API服务统计为准。';
+            }
+        }
+
+        function refillTokenBucket() {
+            const now = Date.now();
+            const timePassed = now - lastRefillTime;
+            const refillAmount = Math.floor(timePassed / 30000); // 每30秒恢复1个令牌
+            tokenBucket = Math.min(2, tokenBucket + refillAmount); // 最多2个令牌
+            lastRefillTime = now;
+        }
+
+        // 移除 window.onerror 处理程序，改用 try-catch 处理具体错误
+
+        // 在页面加载完成后，确保 tooltiptext 存在
+        window.addEventListener('load', function() {
+            const clearRestartButton = document.getElementById('resetButton');
+            if (!clearRestartButton.querySelector('.tooltiptext')) {
+                const tooltip = document.createElement('span');
+                tooltip.className = 'tooltiptext';
+                tooltip.innerHTML = '按新提示词重新生成，<br>请注意保存现有图片！';
+                clearRestartButton.appendChild(tooltip);
+            }
+        });
+
+        function updateSelectAllButtonState() {
+            const checkboxes = document.querySelectorAll('.image-checkbox');
+            const selectAllButton = document.getElementById('selectAllButton');
+            const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+            
+            if (allChecked) {
+                selectAllButton.textContent = '取消全选';
+                selectAllButton.dataset.state = 'deselect';
+            } else {
+                selectAllButton.textContent = '全选';
+                selectAllButton.dataset.state = 'select';
+            }
+        }
     </script>
 </body>
 </html>
