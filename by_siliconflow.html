@@ -823,14 +823,9 @@ Graceful Song dynasty palace maid, modest light-colored silk ruqun with flowing 
             const percentage = (totalGenerated / targetTotal) * 100;
             progressBar.style.width = `${percentage}%`;
             
-            // 只显示总进度信息
             const totalProgressLine = `总进度: 已生成 ${totalGenerated} 张 | 目标 ${targetTotal} 张`;
             
             progressText.textContent = totalProgressLine;
-            
-            const remainingQuota = Math.max(0, dailyQuota - dailyUsage);
-            const statusText = `今日已生成: ${dailyUsage}/${dailyQuota} | 剩余配额: ${remainingQuota}`;
-            updateStatusIndicator(statusText);
         }
 
         function togglePause() {
