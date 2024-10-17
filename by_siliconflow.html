@@ -459,6 +459,52 @@
             0%, 100% { opacity: 0; }
             10%, 90% { opacity: 1; }
         }
+        #statusIndicator {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        @keyframes buffer {
+            0% { background-position: 0 0; }
+            100% { background-position: 70px 0; }
+        }
+
+        #progressBar.buffering div {
+            background-image: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 50px 50px;
+            animation: buffer 1s linear infinite;
+        }
+
+        .dark-mode #progressBar.buffering div {
+            background-image: linear-gradient(
+                -45deg,
+                rgba(0, 0, 0, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(0, 0, 0, 0.2) 50%,
+                rgba(0, 0, 0, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+        }
+
+        .dark-mode #resetButton {
+            background-color: #e67e22; /* 深橙色 */
+        }
+
+        .dark-mode #resetButton:hover {
+            background-color: #d35400; /* 鼠标悬停时的深橙色 */
+        }
     </style>
 </head>
 <body>
@@ -473,10 +519,9 @@
             <p>格式：提示词+权重（权重可选，不写就默认为1；权重越高，使用该提示词生成图片的次数越多。）</p>
             <p>示例：</p>
             <pre>
-A beautiful garden with blooming flowers under bright sunlight
-An ancient castle perched on a cliff, shrouded in mist+1.5
-Futuristic cityscape with flying cars and neon lights
-A young woman with long black hair, wearing a red dress, standing in a forest clearing, soft sunlight filtering through the trees+2</pre>
+A beautiful garden with blooming flowers under bright sunlight+1
+Launch the space shuttle from the base
+Graceful Song dynasty palace maid, modest light-colored silk ruqun with flowing sleeves, high-waisted skirt, simple yet elegant hairstyle with jade hairpin, calm demeanor, arranging peonies in a blue-and-white porcelain vase, standing in a refined scholar's garden, soft afternoon light, photorealistic style+2</pre>
             <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
             <p><strong>注意：如果助手生成的一则提示词包含了多段文字，就手动改改格式，以免因跨行被误判为多则提示词。</strong></p>
         </div>
@@ -506,8 +551,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         </div>
         <div id="generationControls">
             <button id="generateButton" onclick="startGeneration()">生成</button>
-            <button id="pauseButton" onclick="pauseGeneration()" style="display:none;">暂停</button>
-            <button id="resumeButton" onclick="resumeGeneration()" style="display:none;">继续</button>
+            <button id="pauseButton" onclick="togglePause()" style="display:none;">暂停</button>
             <div class="tooltip">
                 <button id="resetButton" onclick="resetGeneration()">清空并且重启</button>
                 <span class="tooltiptext">按新提示词重新生成，<br>请注意保存现有图片！</span>
@@ -535,6 +579,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             </ul>
         </div>
         <div id="imageContainer"></div>
+        <div id="statusIndicator" class="status-indicator"></div>
     </div>
 
     <!-- 添加以下模态框 -->
@@ -556,6 +601,9 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         let tokenBucket = 2;
         let lastRefillTime = Date.now();
         let cooldownTimer = 0;
+        const REFILL_RATE = 30000; // 每30秒添加一个令牌
+        const MAX_TOKENS = 2; // 最大令牌数
+        let progressInterval; // 新增变量来控制进度条更新
 
         function showNotification(message, duration = 5000) {
             const notificationArea = document.getElementById('notificationArea');
@@ -568,30 +616,27 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             }, duration);
         }
 
-        function updateCooldownTimer() {
-            if (cooldownTimer > 0) {
-                showNotification(`冷却中: ${cooldownTimer}秒`, 1000);
-                cooldownTimer--;
-                setTimeout(updateCooldownTimer, 1000);
+        function refillTokenBucket() {
+            const now = Date.now();
+            const timePassed = now - lastRefillTime;
+            const newTokens = Math.floor(timePassed / REFILL_RATE);
+            if (newTokens > 0) {
+                tokenBucket = Math.min(MAX_TOKENS, tokenBucket + newTokens);
+                lastRefillTime = now;
             }
         }
 
         async function generateImage(apiKey, prompt) {
-            if (cooldownTimer > 0) {
-                showNotification(`请等待冷却时间结束: ${cooldownTimer}秒`);
-                return;
+            refillTokenBucket();
+            if (tokenBucket < 1) {
+                setBufferingState(true);
+                await new Promise(resolve => setTimeout(resolve, REFILL_RATE));
+                setBufferingState(false);
+                return null;
             }
+            tokenBucket--;
 
             try {
-                refillTokenBucket();
-                if (tokenBucket < 1) {
-                    cooldownTimer = 30;
-                    showNotification('速率限制：请稍后再试');
-                    updateCooldownTimer();
-                    return;
-                }
-                tokenBucket--;
-
                 const imageSize = document.getElementById('imageSize').value;
                 const seed = document.getElementById('seed').value || '随机';
 
@@ -661,9 +706,10 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             } catch (error) {
                 console.error('生成图片时出错:', error);
                 showNotification(`生成图片时出错: ${error.message}`);
-                cooldownTimer = 30;
-                updateCooldownTimer();
-                return null; // 返回null而不是抛出错误
+                setBufferingState(true);
+                await new Promise(resolve => setTimeout(resolve, 30000)); // 30秒冷却
+                setBufferingState(false);
+                return null;
             }
         }
 
@@ -705,26 +751,23 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
 
             while (isGenerating && totalGenerated < targetTotal && totalGenerated < dailyQuota) {
                 for (const prompt of prompts) {
-                    for (let i = 0; i < imagesPerPrompt * prompt.weight; i++) {
-                        if (isPaused) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            continue;
-                        }
-                        if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
-                        const result = await generateImage(apiKey, prompt.text);
-                        if (result) {
-                            updateProgress(); // 更新进度，移除了额外的参数
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 30000)); // 30秒延迟
+                    if (isPaused) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
                     }
                     if (totalGenerated >= targetTotal || totalGenerated >= dailyQuota) break;
+                    const result = await generateImage(apiKey, prompt.text);
+                    if (result) {
+                        updateProgress();
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒再重试
+                    }
                 }
             }
 
             isGenerating = false;
             document.getElementById('generateButton').style.display = 'inline-block';
             document.getElementById('pauseButton').style.display = 'none';
-            document.getElementById('resumeButton').style.display = 'none';
             updateQuotaInfo();
         }
 
@@ -772,6 +815,9 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
         }
 
         function updateProgress() {
+            if (isPaused) {
+                return; // 如果暂停了，不更新进度条
+            }
             const progressBar = document.getElementById('progressBarFill');
             const progressText = document.getElementById('progressText');
             const percentage = (totalGenerated / targetTotal) * 100;
@@ -782,23 +828,51 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             
             progressText.textContent = totalProgressLine;
             
-            updateQuotaInfo(); // 更新配额信息
+            const remainingQuota = Math.max(0, dailyQuota - dailyUsage);
+            const statusText = `今日已生成: ${dailyUsage}/${dailyQuota} | 剩余配额: ${remainingQuota}`;
+            updateStatusIndicator(statusText);
         }
 
-        function pauseGeneration() {
-            isPaused = true;
-            document.getElementById('pauseButton').style.display = 'none';
-            document.getElementById('resumeButton').style.display = 'inline-block';
-            isGenerating = false;
-            updateQuotaInfo();
+        function togglePause() {
+            if (isPaused) {
+                isPaused = false;
+                document.getElementById('pauseButton').textContent = '暂停';
+                continueGeneration();
+                startProgressBar(); // 恢复进度条
+            } else {
+                isPaused = true;
+                document.getElementById('pauseButton').textContent = '继续';
+                stopProgressBar(); // 立即停止进度条
+            }
         }
 
-        function resumeGeneration() {
-            isPaused = false;
-            document.getElementById('pauseButton').style.display = 'inline-block';
-            document.getElementById('resumeButton').style.display = 'none';
-            isGenerating = true;
-            updateQuotaInfo();
+        function startProgressBar() {
+            clearInterval(progressInterval); // 清除之前的定时器
+            progressInterval = setInterval(updateProgress, 100);
+        }
+
+        function stopProgressBar() {
+            clearInterval(progressInterval);
+        }
+
+        function continueGeneration() {
+            if (!isPaused) {
+                generateNextImage();
+            }
+        }
+
+        function generateNextImage() {
+            if (isPaused) {
+                return;
+            }
+            // ... 现有的生成逻辑 ...
+            startProgressBar(); // 确保在开始生成时启动进度条
+        }
+
+        // 在初始化函数中启动进度条
+        function initializeGenerator() {
+            // ... 现有的初始化逻辑 ...
+            startProgressBar();
         }
 
         function resetGeneration() {
@@ -810,7 +884,6 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             lastRefillTime = Date.now();
             document.getElementById('generateButton').style.display = 'inline-block';
             document.getElementById('pauseButton').style.display = 'none';
-            document.getElementById('resumeButton').style.display = 'none';
             document.getElementById('imageContainer').innerHTML = '';
             updateProgress();
             loadDailyUsage(); // 重新加载每日使用量
@@ -830,7 +903,7 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
                 tooltip.innerHTML = '按新提示词重新生成，<br>请注意保存现有图片！';
                 clearRestartButton.appendChild(tooltip);
             }
-            tooltip.style.visibility = 'hidden'; // 先隐藏,以便重新触发hover效果
+            tooltip.style.visibility = 'hidden'; // 先隐藏,以避免重新触发hover效果
 
             // 使用 setTimeout 来确保 tooltiptext 在下一个事件循环中重新显示
             setTimeout(() => {
@@ -959,14 +1032,6 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             }
         }
 
-        function refillTokenBucket() {
-            const now = Date.now();
-            const timePassed = now - lastRefillTime;
-            const refillAmount = Math.floor(timePassed / 30000); // 每30秒恢复1个令牌
-            tokenBucket = Math.min(2, tokenBucket + refillAmount); // 最多2个令牌
-            lastRefillTime = now;
-        }
-
         // 移除 window.onerror 处理程序，改用 try-catch 处理具体错误
 
         // 在页面加载完成后，确保 tooltiptext 存在
@@ -991,6 +1056,20 @@ A young woman with long black hair, wearing a red dress, standing in a forest cl
             } else {
                 selectAllButton.textContent = '全选';
                 selectAllButton.dataset.state = 'select';
+            }
+        }
+
+        function updateStatusIndicator(status) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.textContent = status;
+        }
+
+        function setBufferingState(isBuffering) {
+            const progressBar = document.getElementById('progressBar');
+            if (isBuffering) {
+                progressBar.classList.add('buffering');
+            } else {
+                progressBar.classList.remove('buffering');
             }
         }
     </script>
