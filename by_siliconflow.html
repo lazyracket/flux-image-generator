@@ -505,6 +505,28 @@
         .dark-mode #resetButton:hover {
             background-color: #d35400; /* 鼠标悬停时的深橙色 */
         }
+
+        #promptInputWrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        #translateButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        #translateButton:hover {
+            background-color: #2980b9;
+        }
     </style>
 </head>
 <body>
@@ -525,8 +547,11 @@ Graceful Song dynasty palace maid, modest light-colored silk ruqun with flowing 
             <p>需要帮助生成提示词？可以参考<a href="https://www.coze.cn/store/agent/7411101906900140070" target="_blank">提示词生成助手</a>。</p>
             <p><strong>注意：如果助手生成的一则提示词包含了多段文字，就手动改改格式，以免因跨行被误判为多则提示词。</strong></p>
         </div>
-        <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
-        <textarea id="promptInput" rows="10"></textarea>
+        <div id="promptInputWrapper">
+            <label for="promptInput"><strong>在下方输入您的提示词：</strong></label>
+            <textarea id="promptInput" rows="10"></textarea>
+            <button id="translateButton" onclick="translatePrompt()">百度中译英</button>
+        </div>
         <select id="generationMode">
             <option value="smart">智能模式（自动分配生成次数）</option>
             <option value="manual">手动模式</option>
@@ -1071,6 +1096,13 @@ Graceful Song dynasty palace maid, modest light-colored silk ruqun with flowing 
             } else {
                 progressBar.classList.remove('buffering');
             }
+        }
+
+        function translatePrompt() {
+            const promptInput = document.getElementById('promptInput');
+            const text = encodeURIComponent(promptInput.value);
+            const url = `https://fanyi.baidu.com/#zh/en/${text}`;
+            window.open(url, '_blank');
         }
     </script>
 </body>
